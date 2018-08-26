@@ -1,0 +1,403 @@
+pragma solidity ^0.4.0;
+
+contract Pass6 {
+    function add(int a) public pure returns (int) {
+        int b = 0;
+        if (b == 0) {
+            b = 20 + 2;
+            b = b - 1;
+            b = b * 2;
+            b = b / 2; // b == 21
+        }
+        assert(b == 21);
+        if ((b == 100) || (b == 21)) {
+            b = b * 2;
+        }
+        assert(b == 42);
+        if ((b == 42) && (b == 30)) {
+            b = b / 2;
+        }
+        if (a > 100) {
+            // does not affect b
+        }
+        assert(b == 42);
+        if (!(b == 42)) {
+            assert(false);
+            b = 10;
+        }
+        if (b % 2 == 0) {
+            b = b;
+        } else {
+            assert(false);
+            b = 0;
+        }
+        assert(b == 42);
+        if ((b ^ 42) != 0) {
+            assert(false);
+        }
+        if (b != (1 << 5) + 10) {
+            assert(false);
+        }
+        if (b != (84 >> 1)) {
+            assert(false);
+        }
+        if (2**3 != 2 << 2) {
+            assert(false);
+        }
+        assert(b == 100 || (b == 42 && b != 200));
+    }
+}
+
+/*
+608060405260043610610041576000357c0100000000000000000000000000000000000000000000000000000000900463ffffffff16806387db03b714610046575b600080fd5b34801561005257600080fd5b5061007160048036038101908080359060200190929190505050610087565b6040518082815260200191505060405180910390f35b6000806000905060008114156100b757601690506001810390506002810290506002818115156100b357fe5b0590505b6015811415156100c357fe5b60648114806100d25750601581145b156100de576002810290505b602a811415156100ea57fe5b602a811480156100fa5750601e81145b1561010f5760028181151561010b57fe5b0590505b602a8114151561011b57fe5b602a81141515610134576000151561012f57fe5b600a90505b600060028281151561014257fe5b07141561015157809050610160565b6000151561015b57fe5b600090505b602a8114151561016c57fe5b6000602a8218141515610184576000151561018357fe5b5b602a81141515610199576000151561019857fe5b5b602a811415156101ae57600015156101ad57fe5b5b6008801415156101c357600015156101c257fe5b5b60648114806101df5750602a811480156101de575060c88114155b5b15156101e757fe5b509190505600a165627a7a723058203a774b218a48a8acbc0103fb75dba4d8229c5cce648f9c5fb2b86f5fddcc09c000
+0      PUSH1  => 128
+2      PUSH1  => 64
+4      MSTORE
+5      PUSH1  => 4
+7      CALLDATASIZE
+8      LT
+9      PUSH2  => 65
+12     JUMPI
+13     PUSH1  => 0
+15     CALLDATALOAD
+16     PUSH29  => 9223372036854775807
+46     SWAP1
+47     DIV
+48     PUSH4  => 4294967295
+53     AND
+54     DUP1
+55     PUSH4  => 2279277495
+60     EQ
+61     PUSH2  => 70
+64     JUMPI
+65     JUMPDEST
+66     PUSH1  => 0
+68     DUP1
+69     REVERT
+70     JUMPDEST
+71     CALLVALUE
+72     DUP1
+73     ISZERO
+74     PUSH2  => 82
+77     JUMPI
+78     PUSH1  => 0
+80     DUP1
+81     REVERT
+82     JUMPDEST
+83     POP
+84     PUSH2  => 113
+87     PUSH1  => 4
+89     DUP1
+90     CALLDATASIZE
+91     SUB
+92     DUP2
+93     ADD
+94     SWAP1
+95     DUP1
+96     DUP1
+97     CALLDATALOAD
+98     SWAP1
+99     PUSH1  => 32
+101    ADD
+102    SWAP1
+103    SWAP3
+104    SWAP2
+105    SWAP1
+106    POP
+107    POP
+108    POP
+109    PUSH2  => 135
+112    JUMP
+113    JUMPDEST
+114    PUSH1  => 64
+116    MLOAD
+117    DUP1
+118    DUP3
+119    DUP2
+120    MSTORE
+121    PUSH1  => 32
+123    ADD
+124    SWAP2
+125    POP
+126    POP
+127    PUSH1  => 64
+129    MLOAD
+130    DUP1
+131    SWAP2
+132    SUB
+133    SWAP1
+134    RETURN
+135    JUMPDEST
+136    PUSH1  => 0
+138    DUP1
+139    PUSH1  => 0
+141    SWAP1
+142    POP
+143    PUSH1  => 0
+145    DUP2
+146    EQ
+147    ISZERO
+148    PUSH2  => 183
+151    JUMPI
+152    PUSH1  => 22
+154    SWAP1
+155    POP
+156    PUSH1  => 1
+158    DUP2
+159    SUB
+160    SWAP1
+161    POP
+162    PUSH1  => 2
+164    DUP2
+165    MUL
+166    SWAP1
+167    POP
+168    PUSH1  => 2
+170    DUP2
+171    DUP2
+172    ISZERO
+173    ISZERO
+174    PUSH2  => 179
+177    JUMPI
+178    Missing opcode 0xfe
+179    JUMPDEST
+180    SDIV
+181    SWAP1
+182    POP
+183    JUMPDEST
+184    PUSH1  => 21
+186    DUP2
+187    EQ
+188    ISZERO
+189    ISZERO
+190    PUSH2  => 195
+193    JUMPI
+194    Missing opcode 0xfe
+195    JUMPDEST
+196    PUSH1  => 100
+198    DUP2
+199    EQ
+200    DUP1
+201    PUSH2  => 210
+204    JUMPI
+205    POP
+206    PUSH1  => 21
+208    DUP2
+209    EQ
+210    JUMPDEST
+211    ISZERO
+212    PUSH2  => 222
+215    JUMPI
+216    PUSH1  => 2
+218    DUP2
+219    MUL
+220    SWAP1
+221    POP
+222    JUMPDEST
+223    PUSH1  => 42
+225    DUP2
+226    EQ
+227    ISZERO
+228    ISZERO
+229    PUSH2  => 234
+232    JUMPI
+233    Missing opcode 0xfe
+234    JUMPDEST
+235    PUSH1  => 42
+237    DUP2
+238    EQ
+239    DUP1
+240    ISZERO
+241    PUSH2  => 250
+244    JUMPI
+245    POP
+246    PUSH1  => 30
+248    DUP2
+249    EQ
+250    JUMPDEST
+251    ISZERO
+252    PUSH2  => 271
+255    JUMPI
+256    PUSH1  => 2
+258    DUP2
+259    DUP2
+260    ISZERO
+261    ISZERO
+262    PUSH2  => 267
+265    JUMPI
+266    Missing opcode 0xfe
+267    JUMPDEST
+268    SDIV
+269    SWAP1
+270    POP
+271    JUMPDEST
+272    PUSH1  => 42
+274    DUP2
+275    EQ
+276    ISZERO
+277    ISZERO
+278    PUSH2  => 283
+281    JUMPI
+282    Missing opcode 0xfe
+283    JUMPDEST
+284    PUSH1  => 42
+286    DUP2
+287    EQ
+288    ISZERO
+289    ISZERO
+290    PUSH2  => 308
+293    JUMPI
+294    PUSH1  => 0
+296    ISZERO
+297    ISZERO
+298    PUSH2  => 303
+301    JUMPI
+302    Missing opcode 0xfe
+303    JUMPDEST
+304    PUSH1  => 10
+306    SWAP1
+307    POP
+308    JUMPDEST
+309    PUSH1  => 0
+311    PUSH1  => 2
+313    DUP3
+314    DUP2
+315    ISZERO
+316    ISZERO
+317    PUSH2  => 322
+320    JUMPI
+321    Missing opcode 0xfe
+322    JUMPDEST
+323    SMOD
+324    EQ
+325    ISZERO
+326    PUSH2  => 337
+329    JUMPI
+330    DUP1
+331    SWAP1
+332    POP
+333    PUSH2  => 352
+336    JUMP
+337    JUMPDEST
+338    PUSH1  => 0
+340    ISZERO
+341    ISZERO
+342    PUSH2  => 347
+345    JUMPI
+346    Missing opcode 0xfe
+347    JUMPDEST
+348    PUSH1  => 0
+350    SWAP1
+351    POP
+352    JUMPDEST
+353    PUSH1  => 42
+355    DUP2
+356    EQ
+357    ISZERO
+358    ISZERO
+359    PUSH2  => 364
+362    JUMPI
+363    Missing opcode 0xfe
+364    JUMPDEST
+365    PUSH1  => 0
+367    PUSH1  => 42
+369    DUP3
+370    XOR
+371    EQ
+372    ISZERO
+373    ISZERO
+374    PUSH2  => 388
+377    JUMPI
+378    PUSH1  => 0
+380    ISZERO
+381    ISZERO
+382    PUSH2  => 387
+385    JUMPI
+386    Missing opcode 0xfe
+387    JUMPDEST
+388    JUMPDEST
+389    PUSH1  => 42
+391    DUP2
+392    EQ
+393    ISZERO
+394    ISZERO
+395    PUSH2  => 409
+398    JUMPI
+399    PUSH1  => 0
+401    ISZERO
+402    ISZERO
+403    PUSH2  => 408
+406    JUMPI
+407    Missing opcode 0xfe
+408    JUMPDEST
+409    JUMPDEST
+410    PUSH1  => 42
+412    DUP2
+413    EQ
+414    ISZERO
+415    ISZERO
+416    PUSH2  => 430
+419    JUMPI
+420    PUSH1  => 0
+422    ISZERO
+423    ISZERO
+424    PUSH2  => 429
+427    JUMPI
+428    Missing opcode 0xfe
+429    JUMPDEST
+430    JUMPDEST
+431    PUSH1  => 8
+433    DUP1
+434    EQ
+435    ISZERO
+436    ISZERO
+437    PUSH2  => 451
+440    JUMPI
+441    PUSH1  => 0
+443    ISZERO
+444    ISZERO
+445    PUSH2  => 450
+448    JUMPI
+449    Missing opcode 0xfe
+450    JUMPDEST
+451    JUMPDEST
+452    PUSH1  => 100
+454    DUP2
+455    EQ
+456    DUP1
+457    PUSH2  => 479
+460    JUMPI
+461    POP
+462    PUSH1  => 42
+464    DUP2
+465    EQ
+466    DUP1
+467    ISZERO
+468    PUSH2  => 478
+471    JUMPI
+472    POP
+473    PUSH1  => 200
+475    DUP2
+476    EQ
+477    ISZERO
+478    JUMPDEST
+479    JUMPDEST
+480    ISZERO
+481    ISZERO
+482    PUSH2  => 487
+485    JUMPI
+486    Missing opcode 0xfe
+487    JUMPDEST
+488    POP
+489    SWAP2
+490    SWAP1
+491    POP
+492    JUMP
+493    STOP
+494    LOG1
+495    PUSH6  => 108278179835992
+502    SHA3
+503    GASPRICE
+504    PUSH24  => 9223372036854775807
+529    PUSH16  => 9223372036854775807
+*/
