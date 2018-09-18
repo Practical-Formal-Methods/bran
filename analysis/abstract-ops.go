@@ -414,7 +414,8 @@ func newAbsJumpTable(forPrefix bool) absJumpTable {
 		vm.LOG3: makeOpLog(3),
 		vm.LOG4: makeOpLog(4),
 
-		vm.CREATE:       opCreate,
+		vm.CREATE: opCreate,
+		// TODO(wuestholz): Maybe improve analysis precision for precompiled contracts.
 		vm.CALL:         opCall,
 		vm.CALLCODE:     opCallCode,
 		vm.RETURN:       emptyResOp,
