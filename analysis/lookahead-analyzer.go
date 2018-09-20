@@ -74,7 +74,7 @@ func (a *LookaheadAnalyzer) Start(code, codeHash []byte) {
 	addr := common.HexToAddress(MagicString("0x0123456789abcdef"))
 	a.codeHash = common.BytesToHash(codeHash)
 	a.contract = newDummyContract(addr, code, a.codeHash)
-	a.prefix = nil
+	a.prefix = map[int]pcType{}
 	a.prefixHash = fnv.New32()
 }
 
@@ -88,7 +88,7 @@ func (a *LookaheadAnalyzer) AppendPrefixInstruction(pc uint64) {
 	a.startTimer()
 	defer a.stopTimer()
 	if a.prefixHash != nil {
-		a.prefix = append(a.prefix, pcType(pc))
+		a.prefix[len(a.prefix)] = pcType(pc)
 		b := make([]byte, 8)
 		binary.LittleEndian.PutUint64(b, pc)
 		a.prefixHash.Write(b)

@@ -26,7 +26,7 @@ import (
 
 type pcType uint64
 
-type execPrefix []pcType
+type execPrefix map[int]pcType
 
 type concJumpTable [256]vm.Operation
 
@@ -177,7 +177,12 @@ func (a *constPropAnalyzer) Analyze(execPrefix execPrefix) (result, error, error
 func (a *constPropAnalyzer) calculatePrecondition(concJt concJumpTable, absJt absJumpTable, execPrefix execPrefix) (stepRes, error) {
 	ppcMap := newPrevPCMap()
 	currRes := initRes()
-	for idx, pc := range execPrefix {
+	for idx := 0; true; idx++ {
+		pc, exists := execPrefix[idx]
+		if !exists {
+			break
+		}
+
 		// Select from the results only the state that matchesBackwards the next pc in the prefix.
 		currSt := botState()
 		for _, st := range currRes.postStates {
