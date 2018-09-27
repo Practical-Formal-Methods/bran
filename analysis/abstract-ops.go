@@ -1,4 +1,4 @@
-// Copyright 2018 MPI-SWS and Valentin Wuestholz
+// Copyright 2018 ConsenSys, MPI-SWS, and Valentin Wuestholz
 
 // This file is part of Bran.
 //
@@ -209,11 +209,12 @@ func newAbsJumpTable(forPrefix bool) absJumpTable {
 	opCallCode := mayFailOp
 	opDelegateCall := mayFailOp
 	opStaticCall := mayFailOp
+	opCreate2 := mayFailOp
 	if forPrefix {
 		opCreate = absOp{
 			valid:   true,
 			memSize: makeMemFn(1, 2),
-			exec:    makePopPushMemTopFn(3, 1),
+			exec:    makePopPushTopFn(3, 1),
 		}
 		opCall = absOp{
 			valid:   true,
@@ -234,6 +235,11 @@ func newAbsJumpTable(forPrefix bool) absJumpTable {
 			valid:   true,
 			memSize: makeMemFn(2, 3, 4, 5),
 			exec:    makePopPushMemTopFn(6, 1),
+		}
+		opCreate2 = absOp{
+			valid:   true,
+			memSize: makeMemFn(1, 2),
+			exec:    makePopPushTopFn(4, 1),
 		}
 	}
 	return absJumpTable{
@@ -304,6 +310,7 @@ func newAbsJumpTable(forPrefix bool) absJumpTable {
 			memSize: makeMemFn(0, 2),
 			exec:    opReturnDataCopy,
 		},
+		vm.EXTCODEHASH: makePopPushTopOp(1, 1),
 
 		vm.BLOCKHASH:  makePopPushTopOp(1, 1),
 		vm.COINBASE:   makePopPushTopOp(0, 1),
@@ -420,6 +427,7 @@ func newAbsJumpTable(forPrefix bool) absJumpTable {
 		vm.CALLCODE:     opCallCode,
 		vm.RETURN:       emptyResOp,
 		vm.DELEGATECALL: opDelegateCall,
+		vm.CREATE2:      opCreate2,
 		vm.STATICCALL:   opStaticCall,
 		vm.REVERT:       emptyResOp,
 		vm.SELFDESTRUCT: emptyResOp,

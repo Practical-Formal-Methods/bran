@@ -1,4 +1,4 @@
-// Copyright 2018 MPI-SWS and Valentin Wuestholz
+// Copyright 2018 ConsenSys, MPI-SWS and Valentin Wuestholz
 
 // This file is part of Bran.
 //
@@ -238,7 +238,7 @@ func newDummyContract(address common.Address, code []byte, codeHash common.Hash)
 // newDummyEVM creates a EVM object we can use to run code.
 func newDummyEVM() *vm.EVM {
 	ctx := vm.Context{}
-	evmConfig := vm.Config{JumpTable: vm.NewByzantiumInstructionSet()}
+	evmConfig := vm.Config{JumpTable: vm.NewConstantinopleInstructionSet()}
 	chainConfig := &params.ChainConfig{}
 	dummyStateDB := &state.StateDB{}
 	return vm.NewEVM(ctx, dummyStateDB, chainConfig, evmConfig)

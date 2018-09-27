@@ -54,12 +54,12 @@ var (
 	frontierInstructionSet       = newFrontierInstructionSet()
 	homesteadInstructionSet      = newHomesteadInstructionSet()
 	byzantiumInstructionSet      = NewByzantiumInstructionSet()
-	constantinopleInstructionSet = newConstantinopleInstructionSet()
+	constantinopleInstructionSet = NewConstantinopleInstructionSet()
 )
 
 // NewConstantinopleInstructionSet returns the frontier, homestead
 // byzantium and contantinople instructions.
-func newConstantinopleInstructionSet() [256]Operation {
+func NewConstantinopleInstructionSet() [256]Operation {
 	// instructions that can be executed during the byzantium phase.
 	instructionSet := NewByzantiumInstructionSet()
 	instructionSet[SHL] = Operation{
