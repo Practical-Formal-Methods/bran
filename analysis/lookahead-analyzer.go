@@ -47,6 +47,7 @@ type LookaheadAnalyzer struct {
 	codeHash          common.Hash
 	prefix            execPrefix
 	prefixHash        hash.Hash32
+	summaryHash       hash.Hash32
 	cachedResults     map[prefixHash]result
 	coveredAssertions map[string]bool
 	lids              map[string]string
@@ -79,11 +80,12 @@ func (a *LookaheadAnalyzer) Start(code, codeHash []byte) {
 	a.contract = newDummyContract(addr, code, a.codeHash)
 	a.prefix = map[int]pcType{}
 	a.prefixHash = fnv.New32()
+	a.summaryHash = fnv.New32()
 }
 
 func (a *LookaheadAnalyzer) AppendPrefixSummary(summaryId string) {
-	if a.prefixHash != nil {
-		a.prefixHash.Write([]byte(summaryId))
+	if a.summaryHash != nil {
+		a.summaryHash.Write([]byte(summaryId))
 	}
 }
 
@@ -102,12 +104,13 @@ func (a *LookaheadAnalyzer) CanIgnoreSuffix() (canIgnore, avoidRetry bool, justi
 	a.startTimer()
 	defer a.stopTimer()
 
-	if a.prefixHash == nil {
+	if a.prefixHash == nil || a.summaryHash == nil {
 		return false, false, "", "", fmt.Errorf("analysis not yet started")
 	}
 
 	pHash := prefixHash(a.prefixHash.Sum32())
-	pid := fmt.Sprintf("%x", pHash)
+	sHash := a.summaryHash.Sum32()
+	pid := fmt.Sprintf("%x:%x", pHash, sHash)
 
 	if cachedRes, found := a.cachedResults[pHash]; found {
 		if cachedRes.mayFail {
