@@ -49,13 +49,14 @@ type LookaheadAnalyzer struct {
 	prefixHash        hash.Hash32
 	cachedResults     map[prefixHash]result
 	coveredAssertions map[string]bool
+	lids              map[string]string
+	coveredPaths      map[string]uint64
 
 	numSuccess    uint64
 	numFail       uint64
 	numPrefixFail uint64
 	failureCauses map[string]uint64
 	numErrors     uint64
-	numSameLID    uint64
 	time          time.Duration
 	startTime     time.Time
 }
@@ -67,6 +68,8 @@ func NewLookaheadAnalyzer() *LookaheadAnalyzer {
 		failureCauses:     map[string]uint64{},
 		cachedResults:     map[prefixHash]result{},
 		coveredAssertions: map[string]bool{},
+		lids:              map[string]string{},
+		coveredPaths:      map[string]uint64{},
 	}
 }
 
@@ -165,8 +168,11 @@ func (a *LookaheadAnalyzer) stopTimer() {
 	a.time += time.Now().Sub(a.startTime)
 }
 
-func (a *LookaheadAnalyzer) RecordPathWithSameLID() {
-	a.numSameLID++
+func (a *LookaheadAnalyzer) RecordCoveredPath(pathId, lid string) {
+	if _, exists := a.lids[pathId]; !exists {
+		a.lids[pathId] = lid
+		a.coveredPaths[lid]++
+	}
 }
 
 func (a *LookaheadAnalyzer) recordSuccess() {
@@ -202,8 +208,12 @@ func (a *LookaheadAnalyzer) NumErrors() uint64 {
 	return a.numErrors
 }
 
-func (a *LookaheadAnalyzer) NumPathsWithSameLID() uint64 {
-	return a.numSameLID
+func (a *LookaheadAnalyzer) CoveredPathsPerLID() map[string]uint64 {
+	cps := map[string]uint64{}
+	for lid, cnt := range a.coveredPaths {
+		cps[lid] = cnt
+	}
+	return cps
 }
 
 func (a *LookaheadAnalyzer) Time() time.Duration {
