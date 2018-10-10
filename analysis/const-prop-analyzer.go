@@ -114,7 +114,7 @@ func (a *constPropAnalyzer) Analyze(execPrefix execPrefix) (result, error, error
 	}
 
 	absJt := newAbsJumpTable(false)
-	states := make(map[pcType]absState)
+	states := map[pcType]absState{}
 	ppcMap := newPrevPCMap()
 	var worklist []pcType
 	workset := map[pcType]bool{}
