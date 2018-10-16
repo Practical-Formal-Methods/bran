@@ -79,8 +79,8 @@ func (a *LookaheadAnalyzer) Start(code, codeHash []byte) {
 	a.codeHash = common.BytesToHash(codeHash)
 	a.contract = newDummyContract(addr, code, a.codeHash)
 	a.prefix = map[int]pcType{}
-	a.prefixHash = fnv.New32()
-	a.summaryHash = fnv.New32()
+	a.prefixHash = fnv.New32a()
+	a.summaryHash = fnv.New32a()
 }
 
 func (a *LookaheadAnalyzer) AppendPrefixSummary(summaryId string) {
