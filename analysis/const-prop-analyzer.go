@@ -21,7 +21,7 @@ import (
 	"fmt"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/math"
-	"github.com/wuestholz/bran/vm"
+	"github.com/practical-formal-methods/bran/vm"
 )
 
 type pcType uint64

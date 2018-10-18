@@ -23,7 +23,7 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/state"
 	"github.com/ethereum/go-ethereum/params"
-	"github.com/wuestholz/bran/vm"
+	"github.com/practical-formal-methods/bran/vm"
 	"hash"
 	"hash/fnv"
 	"time"

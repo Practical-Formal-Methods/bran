@@ -19,7 +19,7 @@ package analysis
 
 import (
 	"fmt"
-	"github.com/wuestholz/bran/vm"
+	"github.com/practical-formal-methods/bran/vm"
 )
 
 // absStack represents a stack that can be top.

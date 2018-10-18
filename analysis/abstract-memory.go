@@ -18,7 +18,7 @@
 package analysis
 
 import (
-	"github.com/wuestholz/bran/vm"
+	"github.com/practical-formal-methods/bran/vm"
 	"math/big"
 )
 
