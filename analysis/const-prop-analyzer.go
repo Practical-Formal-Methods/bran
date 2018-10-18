@@ -1,4 +1,4 @@
-// Copyright 2018 MPI-SWS and Valentin Wuestholz
+// MPI-SWS, Valentin Wuestholz, and ConsenSys AG
 
 // This file is part of Bran.
 //
