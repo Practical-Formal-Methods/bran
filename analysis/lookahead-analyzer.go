@@ -42,16 +42,12 @@ var StepExecFail = "step-execution-failure"
 var InternalFail = "internal-failure"
 
 type LookaheadAnalyzer struct {
-	cpAnalyzer        *constPropAnalyzer
-	contract          *vm.Contract
-	codeHash          common.Hash
-	prefix            execPrefix
-	prefixHash        hash.Hash32
-	summaryHash       hash.Hash32
+	callInfos         map[uint64]*callInfo
 	cachedResults     map[prefixHash]result
 	coveredAssertions map[string]bool
 	lids              map[string]string
 	coveredPaths      map[string]uint64
+	maxPrefixLen      int
 
 	numSuccess    uint64
 	numFail       uint64
@@ -60,6 +56,16 @@ type LookaheadAnalyzer struct {
 	numErrors     uint64
 	time          time.Duration
 	startTime     time.Time
+}
+
+type callInfo struct {
+	contract    *vm.Contract
+	codeHash    common.Hash
+	prefix      execPrefix
+	prefixLen   int
+	prefixHash  hash.Hash32
+	summaryHash hash.Hash32
+	analyzer    *constPropAnalyzer
 }
 
 type prefixHash uint32
@@ -71,45 +77,82 @@ func NewLookaheadAnalyzer() *LookaheadAnalyzer {
 		coveredAssertions: map[string]bool{},
 		lids:              map[string]string{},
 		coveredPaths:      map[string]uint64{},
+		callInfos:         map[uint64]*callInfo{},
+		maxPrefixLen:      MagicInt(4096),
 	}
 }
 
-func (a *LookaheadAnalyzer) Start(code, codeHash []byte) {
+func (a *LookaheadAnalyzer) Start(callNumber uint64, code, codeHash []byte) {
+	a.startTimer()
+	defer a.stopTimer()
+
+	if callNumber < 1 {
+		a.callInfos = map[uint64]*callInfo{}
+	}
 	addr := common.HexToAddress(MagicString("0x0123456789abcdef"))
-	a.codeHash = common.BytesToHash(codeHash)
-	a.contract = newDummyContract(addr, code, a.codeHash)
-	a.prefix = map[int]pcType{}
-	a.prefixHash = fnv.New32a()
-	a.summaryHash = fnv.New32a()
-}
-
-func (a *LookaheadAnalyzer) AppendPrefixSummary(summaryId string) {
-	if a.summaryHash != nil {
-		a.summaryHash.Write([]byte(summaryId))
+	ch := common.BytesToHash(codeHash)
+	info := callInfo{
+		codeHash:    ch,
+		contract:    newDummyContract(addr, code, ch),
+		prefix:      map[int]pcType{},
+		prefixHash:  fnv.New32a(),
+		summaryHash: fnv.New32a(),
 	}
+	a.callInfos[callNumber] = &info
 }
 
-func (a *LookaheadAnalyzer) AppendPrefixInstruction(pc uint64) {
-	a.startTimer()
-	defer a.stopTimer()
-	if a.prefixHash != nil {
-		a.prefix[len(a.prefix)] = pcType(pc)
-		b := make([]byte, 8)
-		binary.LittleEndian.PutUint64(b, pc)
-		a.prefixHash.Write(b)
-	}
-}
-
-func (a *LookaheadAnalyzer) CanIgnoreSuffix() (canIgnore, avoidRetry bool, justification, prefixId string, err error) {
+func (a *LookaheadAnalyzer) AppendPrefixSummary(callNumber, callNumberToSummarize uint64) {
 	a.startTimer()
 	defer a.stopTimer()
 
-	if a.prefixHash == nil || a.summaryHash == nil {
+	info := a.callInfos[callNumber]
+	if info == nil {
+		return
+	}
+	sumInfo := a.callInfos[callNumberToSummarize]
+	if sumInfo == nil {
+		return
+	}
+	b := make([]byte, 4)
+	sum := sumInfo.prefixHash.Sum32()
+	binary.LittleEndian.PutUint32(b, sum)
+	info.summaryHash.Write(b)
+}
+
+func (a *LookaheadAnalyzer) AppendPrefixInstruction(callNumber uint64, pc uint64) {
+	a.startTimer()
+	defer a.stopTimer()
+
+	info := a.callInfos[callNumber]
+	if info == nil {
+		return
+	}
+	prefixLen := info.prefixLen
+	if prefixLen < a.maxPrefixLen {
+		// We stop recording if it becomes too long.
+		info.prefix[prefixLen] = pcType(pc)
+	}
+	info.prefixLen++
+	b := make([]byte, 8)
+	binary.LittleEndian.PutUint64(b, pc)
+	info.prefixHash.Write(b)
+}
+
+func (a *LookaheadAnalyzer) CanIgnoreSuffix(callNumber uint64) (canIgnore, avoidRetry bool, justification, prefixId string, err error) {
+	a.startTimer()
+	defer a.stopTimer()
+
+	info := a.callInfos[callNumber]
+	if info == nil {
 		return false, false, "", "", fmt.Errorf("analysis not yet started")
 	}
 
-	pHash := prefixHash(a.prefixHash.Sum32())
-	sHash := a.summaryHash.Sum32()
+	if a.maxPrefixLen < info.prefixLen {
+		return false, true, "", "", fmt.Errorf("overly long prefix")
+	}
+
+	pHash := prefixHash(info.prefixHash.Sum32())
+	sHash := info.summaryHash.Sum32()
 	pid := fmt.Sprintf("%x:%x", pHash, sHash)
 
 	if cachedRes, found := a.cachedResults[pHash]; found {
@@ -120,16 +163,16 @@ func (a *LookaheadAnalyzer) CanIgnoreSuffix() (canIgnore, avoidRetry bool, justi
 		return true, cachedRes.inPrefix, "", pid, nil
 	}
 
-	if a.cpAnalyzer == nil {
+	if info.analyzer == nil {
 		evm := newDummyEVM()
 		interpreter, ok := evm.Interpreter().(*vm.EVMInterpreter)
 		if !ok {
 			return false, true, "", pid, fmt.Errorf("expected compatible EVM interpreter")
 		}
-		a.cpAnalyzer = newConstPropAnalyzer(a.contract, a.codeHash, interpreter, a)
+		info.analyzer = newConstPropAnalyzer(info.contract, info.codeHash, interpreter, a)
 	}
 
-	res, prefixErr, suffixErr := a.cpAnalyzer.Analyze(a.prefix)
+	res, prefixErr, suffixErr := info.analyzer.Analyze(info.prefix)
 	if prefixErr != nil {
 		a.recordError()
 		return false, true, "", pid, prefixErr

@@ -180,11 +180,11 @@ func TestConstantPropagation(t *testing.T) {
 			continue
 		}
 		a := NewLookaheadAnalyzer()
-		a.Start(code, crypto.Keccak256Hash(code).Bytes())
+		a.Start(1, code, crypto.Keccak256Hash(code).Bytes())
 		for _, pc := range tc.prefix {
-			a.AppendPrefixInstruction(uint64(pc))
+			a.AppendPrefixInstruction(1, uint64(pc))
 		}
-		canIgnore, _, cause, _, err := a.CanIgnoreSuffix()
+		canIgnore, _, cause, _, err := a.CanIgnoreSuffix(1)
 		if err != nil {
 			t.Errorf("[%v] analysis ended with an error: %v", tc.name, err)
 			continue
