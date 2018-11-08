@@ -219,22 +219,22 @@ func newAbsJumpTable(forPrefix bool) absJumpTable {
 		opCall = absOp{
 			valid:   true,
 			memSize: makeMemFn(3, 4, 5, 6),
-			exec:    makePopPushMemTopFn(7, 1),
+			exec:    makePopPushMemTopFn(7, 1, 5, 6),
 		}
 		opCallCode = absOp{
 			valid:   true,
 			memSize: makeMemFn(3, 4, 5, 6),
-			exec:    makePopPushMemTopFn(7, 1),
+			exec:    makePopPushMemTopFn(7, 1, 5, 6),
 		}
 		opDelegateCall = absOp{
 			valid:   true,
 			memSize: makeMemFn(2, 3, 4, 5),
-			exec:    makePopPushMemTopFn(6, 1),
+			exec:    makePopPushMemTopFn(6, 1, 4, 5),
 		}
 		opStaticCall = absOp{
 			valid:   true,
 			memSize: makeMemFn(2, 3, 4, 5),
-			exec:    makePopPushMemTopFn(6, 1),
+			exec:    makePopPushMemTopFn(6, 1, 4, 5),
 		}
 		opCreate2 = absOp{
 			valid:   true,
@@ -337,8 +337,8 @@ func newAbsJumpTable(forPrefix bool) absJumpTable {
 			exec:    opMstore8,
 		},
 
-		vm.SLOAD:  fromExec(opSload),
-		vm.SSTORE: fromExec(opSstore),
+		vm.SLOAD:  makePopPushTopOp(1, 1),
+		vm.SSTORE: makePopPushTopOp(2, 0),
 
 		vm.JUMP:  fromExec(opJump),
 		vm.JUMPI: fromExec(opJumpi),
@@ -493,17 +493,23 @@ func makePopPushTopFn(pop, push int) execFn {
 	}
 }
 
-func makePopPushMemTopFn(pop, push int) execFn {
+func makePopPushMemTopFn(pop, push, memOffsetIdx, memSizeArgIdx int) execFn {
 	return func(env execEnv) (stepRes, error) {
 		env2 := env.withStackCopy().withMemCopy().withPcCopy()
 		stack2, _ := env2.unpack()
+		memOffset := stack2.Back(5)
+		memSize := stack2.Back(6)
 		for i := 0; i < pop; i++ {
 			stack2.Pop()
 		}
 		for i := 0; i < push; i++ {
 			stack2.Push(topVal())
 		}
-		env2.st.mem = topMem()
+		if isTop(memOffset) || isTop(memSize) {
+			env2.st.mem = topMem()
+		} else {
+			env2.st.mem.set(memOffset.Uint64(), memSize.Uint64(), topBytes())
+		}
 		return nextPcRes(env2), nil
 	}
 }
@@ -596,24 +602,6 @@ func opMstore8(env execEnv) (stepRes, error) {
 	if err := execConc(env2); err != nil {
 		return emptyRes(), nil
 	}
-	return nextPcRes(env2), nil
-}
-
-func opSload(env execEnv) (stepRes, error) {
-	env2 := env.withStackCopy().withPcCopy()
-	stack2, _ := env2.unpack()
-	// We approximate storage load conservatively by just pushing top.
-	stack2.Pop() // the load location
-	stack2.Push(topVal())
-	return nextPcRes(env2), nil
-}
-
-func opSstore(env execEnv) (stepRes, error) {
-	env2 := env.withStackCopy().withPcCopy()
-	stack2, _ := env2.unpack()
-	// We treat stores as no-ops since we do not track the persistent storage.
-	stack2.Pop() // the store location
-	stack2.Pop() // the value to be stored
 	return nextPcRes(env2), nil
 }
 
