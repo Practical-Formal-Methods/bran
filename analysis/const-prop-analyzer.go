@@ -33,7 +33,7 @@ type concJumpTable [256]vm.Operation
 type result struct {
 	mayFail      bool
 	failureCause string
-	inPrefix     bool
+	avoidRetry   bool
 }
 
 func noFail() result {
@@ -51,7 +51,7 @@ func prefixMayFail(cause string) result {
 	return result{
 		mayFail:      true,
 		failureCause: cause,
-		inPrefix:     true,
+		avoidRetry:   true,
 	}
 }
 

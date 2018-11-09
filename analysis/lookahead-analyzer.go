@@ -157,10 +157,10 @@ func (a *LookaheadAnalyzer) CanIgnoreSuffix(callNumber uint64) (canIgnore, avoid
 
 	if cachedRes, found := a.cachedResults[pHash]; found {
 		if cachedRes.mayFail {
-			return false, cachedRes.inPrefix, cachedRes.failureCause, pid, nil
+			return false, cachedRes.avoidRetry, cachedRes.failureCause, pid, nil
 		}
 		a.recordSuccess()
-		return true, cachedRes.inPrefix, "", pid, nil
+		return true, cachedRes.avoidRetry, "", pid, nil
 	}
 
 	if info.analyzer == nil {
@@ -186,12 +186,12 @@ func (a *LookaheadAnalyzer) CanIgnoreSuffix(callNumber uint64) (canIgnore, avoid
 	a.cachedResults[pHash] = result{
 		mayFail:      res.mayFail,
 		failureCause: res.failureCause,
-		inPrefix:     res.inPrefix,
+		avoidRetry:   res.avoidRetry,
 	}
 
 	if res.mayFail {
-		a.recordFailure(res.failureCause, res.inPrefix)
-		return false, res.inPrefix, res.failureCause, pid, nil
+		a.recordFailure(res.failureCause, res.avoidRetry)
+		return false, res.avoidRetry, res.failureCause, pid, nil
 	}
 
 	a.recordSuccess()
