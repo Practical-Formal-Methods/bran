@@ -78,7 +78,7 @@ func NewLookaheadAnalyzer() *LookaheadAnalyzer {
 		lids:              map[string]string{},
 		coveredPaths:      map[string]uint64{},
 		callInfos:         map[uint64]*callInfo{},
-		maxPrefixLen:      MagicInt(4096),
+		maxPrefixLen:      MagicInt(8192),
 	}
 }
 
