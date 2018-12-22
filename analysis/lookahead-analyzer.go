@@ -26,6 +26,7 @@ import (
 	"github.com/practical-formal-methods/bran/vm"
 	"hash"
 	"hash/fnv"
+	"math/big"
 	"time"
 )
 
@@ -295,7 +296,18 @@ func newDummyContract(address common.Address, code []byte, codeHash common.Hash)
 func newDummyEVM() *vm.EVM {
 	ctx := vm.Context{}
 	evmConfig := vm.Config{JumpTable: vm.NewConstantinopleInstructionSet()}
-	chainConfig := &params.ChainConfig{}
+	chainConfig := &params.ChainConfig{
+		ChainID:             big.NewInt(1),
+		HomesteadBlock:      big.NewInt(0),
+		DAOForkBlock:        big.NewInt(0),
+		DAOForkSupport:      false,
+		EIP150Block:         big.NewInt(0),
+		EIP155Block:         big.NewInt(0),
+		EIP158Block:         big.NewInt(0),
+		ByzantiumBlock:      big.NewInt(0),
+		ConstantinopleBlock: big.NewInt(0),
+		Ethash:              new(params.EthashConfig),
+	}
 	dummyStateDB := &state.StateDB{}
 	return vm.NewEVM(ctx, dummyStateDB, chainConfig, evmConfig)
 }
