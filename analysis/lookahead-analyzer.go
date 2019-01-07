@@ -288,7 +288,7 @@ func newDummyContract(address common.Address, code []byte, codeHash common.Hash)
 	dummyRef := dummyContractRef{address: address}
 	val := topVal()
 	ct := vm.NewContract(dummyRef, dummyRef, val, MagicUInt64(0xffffffffffffffff))
-	ct.SetCode(codeHash, code)
+	ct.SetCodeOptionalHash(&(dummyRef.address), &vm.CodeAndHash{Code: code, CodeHash: codeHash})
 	return ct
 }
 
