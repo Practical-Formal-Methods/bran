@@ -20,14 +20,16 @@ package analysis
 import (
 	"encoding/binary"
 	"fmt"
-	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/core/state"
-	"github.com/ethereum/go-ethereum/params"
-	"github.com/practical-formal-methods/bran/vm"
 	"hash"
 	"hash/fnv"
 	"math/big"
 	"time"
+
+	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/core/state"
+	"github.com/ethereum/go-ethereum/params"
+
+	"github.com/practical-formal-methods/bran/vm"
 )
 
 var InvalidOpcodeFail = "invalid-opcode"

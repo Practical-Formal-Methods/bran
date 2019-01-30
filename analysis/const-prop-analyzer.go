@@ -19,8 +19,10 @@ package analysis
 
 import (
 	"fmt"
+
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/math"
+
 	"github.com/practical-formal-methods/bran/vm"
 )
 

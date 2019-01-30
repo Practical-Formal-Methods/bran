@@ -19,6 +19,7 @@ package analysis
 
 import (
 	"fmt"
+
 	"github.com/practical-formal-methods/bran/vm"
 )
 

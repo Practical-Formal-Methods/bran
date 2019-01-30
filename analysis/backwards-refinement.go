@@ -18,9 +18,11 @@
 package analysis
 
 import (
-	"github.com/ethereum/go-ethereum/common"
-	"github.com/practical-formal-methods/bran/vm"
 	"math/big"
+
+	"github.com/ethereum/go-ethereum/common"
+
+	"github.com/practical-formal-methods/bran/vm"
 )
 
 type opcodeArg struct {

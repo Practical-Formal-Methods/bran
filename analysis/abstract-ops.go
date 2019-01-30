@@ -18,8 +18,9 @@
 package analysis
 
 import (
-	"github.com/practical-formal-methods/bran/vm"
 	"math/big"
+
+	"github.com/practical-formal-methods/bran/vm"
 )
 
 // pcAndSt is a pair of program counter and state.

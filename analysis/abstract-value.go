@@ -18,8 +18,9 @@
 package analysis
 
 import (
-	"github.com/ethereum/go-ethereum/common/math"
 	"math/big"
+
+	"github.com/ethereum/go-ethereum/common/math"
 )
 
 // absVal represents an abstract value.

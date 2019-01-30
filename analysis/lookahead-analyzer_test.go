@@ -19,9 +19,10 @@ package analysis
 
 import (
 	"encoding/hex"
-	"github.com/ethereum/go-ethereum/crypto"
 	"strings"
 	"testing"
+
+	"github.com/ethereum/go-ethereum/crypto"
 )
 
 var tests = []struct {
