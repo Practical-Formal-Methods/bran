@@ -116,10 +116,14 @@ func (a *LookaheadAnalyzer) AppendPrefixSummary(callNumber, callNumberToSummariz
 	if sumInfo == nil {
 		return
 	}
-	b := make([]byte, 4)
-	sum := sumInfo.prefixHash.Sum32()
-	binary.LittleEndian.PutUint32(b, sum)
-	info.summaryHash.Write(b)
+	prefixSum := sumInfo.prefixHash.Sum32()
+	prefixBytes := make([]byte, 4)
+	binary.LittleEndian.PutUint32(prefixBytes, prefixSum)
+	info.summaryHash.Write(prefixBytes)
+	summarySum := sumInfo.summaryHash.Sum32()
+	summaryBytes := make([]byte, 4)
+	binary.LittleEndian.PutUint32(summaryBytes, summarySum)
+	info.summaryHash.Write(summaryBytes)
 }
 
 func (a *LookaheadAnalyzer) AppendPrefixInstruction(callNumber uint64, pc uint64) {
