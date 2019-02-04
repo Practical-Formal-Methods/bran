@@ -145,6 +145,16 @@ func (a *LookaheadAnalyzer) AppendPrefixInstruction(callNumber uint64, pc uint64
 	info.prefixHash.Write(b)
 }
 
+func (a *LookaheadAnalyzer) CurrentPathID() string {
+	info := a.callInfos[0]
+	if info == nil {
+		return ""
+	}
+	pHash := prefixHash(info.prefixHash.Sum32())
+	sHash := info.summaryHash.Sum32()
+	return fmt.Sprintf("%x+%x", pHash, sHash)
+}
+
 func (a *LookaheadAnalyzer) CanIgnoreSuffix(callNumber uint64) (canIgnore, avoidRetry bool, justification, prefixId string, err error) {
 	a.startTimer()
 	defer a.stopTimer()
