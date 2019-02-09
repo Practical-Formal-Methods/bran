@@ -162,6 +162,7 @@ func backwardsRefineStack(origStack *vm.Stack, contract *vm.Contract, ppcMap *pr
 				refinedStack.Back(indexInRefinedStack(idx)).Set(meet)
 			}
 		} else if match, args, ppc = suffixMatches(pc, []vm.OpCode{vm.EQ, vm.DUP, vm.DUP}); match && args[1].dupIdx > 1 && topEq(currStack, 1) {
+			// TODO(wuestholz): Maybe change the above condition to args[1].dupIdx >= 1.
 			currStack.Pop()
 			idx1 := args[1].dupIdx - 1
 			val1 := currStack.Back(idx1)

@@ -92,6 +92,7 @@ type constPropAnalyzer struct {
 	interpreter        *vm.EVMInterpreter
 	analyzer           *LookaheadAnalyzer
 	failOnTopMemResize bool
+	verbose            bool
 }
 
 func newConstPropAnalyzer(contract *vm.Contract, codeHash common.Hash, interpreter *vm.EVMInterpreter, analyzer *LookaheadAnalyzer) *constPropAnalyzer {
@@ -101,10 +102,26 @@ func newConstPropAnalyzer(contract *vm.Contract, codeHash common.Hash, interpret
 		interpreter:        interpreter,
 		analyzer:           analyzer,
 		failOnTopMemResize: MagicBool(false),
+		verbose:            MagicBool(false),
 	}
 }
 
 func (a *constPropAnalyzer) Analyze(execPrefix execPrefix) (result, error, error) {
+	if a.verbose {
+		var pre []uint64
+		idx := 0
+		for true {
+			pc, exists := execPrefix[idx]
+			if !exists {
+				break
+			}
+			pre = append(pre, uint64(pc))
+			idx++
+		}
+		fmt.Printf("prefix: %#v\n", pre)
+		fmt.Printf("code: %x\n", a.contract.Code)
+	}
+
 	concJt := a.interpreter.Cfg.JumpTable
 	absJtPrefix := newAbsJumpTable(true)
 	prefixRes, err := a.calculatePrecondition(concJt, absJtPrefix, execPrefix)
