@@ -51,6 +51,7 @@ type LookaheadAnalyzer struct {
 	lids              map[string]string
 	coveredPaths      map[string]uint64
 	maxPrefixLen      int
+	useDummyAnalysis  bool
 
 	numSuccess    uint64
 	numFail       uint64
@@ -82,6 +83,7 @@ func NewLookaheadAnalyzer() *LookaheadAnalyzer {
 		coveredPaths:      map[string]uint64{},
 		callInfos:         map[uint64]*callInfo{},
 		maxPrefixLen:      MagicInt(8192),
+		useDummyAnalysis:  MagicBool(false),
 	}
 }
 
@@ -162,6 +164,10 @@ func (a *LookaheadAnalyzer) CanIgnoreSuffix(callNumber uint64) (canIgnore, avoid
 	info := a.callInfos[callNumber]
 	if info == nil {
 		return false, false, "", "", fmt.Errorf("analysis not yet started")
+	}
+
+	if a.useDummyAnalysis {
+		return false, false, "", "", nil
 	}
 
 	if a.maxPrefixLen < info.prefixLen {
