@@ -133,38 +133,73 @@ func (a *constPropAnalyzer) Analyze(execPrefix execPrefix) (result, error, error
 	}
 
 	absJt := newAbsJumpTable(false)
-	states := map[pcType]absState{}
+	states := map[string]absState{}
 	ppcMap := newPrevPCMap()
-	var worklist []pcType
-	workset := map[pcType]bool{}
+	var worklist []string
+	workset := map[string]pcType{}
+	maxDisjs := MagicInt(1)
 
-	stOrBot := func(pc pcType) absState {
-		st, ok := states[pc]
-		if !ok {
-			return botState()
+	stOrBot := func(pc pcType) []absState {
+		var sts []absState
+		for i := 0; i < maxDisjs; i++ {
+			loc := fmt.Sprintf("%x:%x", pc, i)
+			st, ok := states[loc]
+			if !ok {
+				return sts
+			}
+			sts = append(sts, st)
 		}
-		return st
+		return sts
 	}
 
-	addNewStates := func(pc pcType, newStates []pcAndSt) {
+	addNewStates := func(prevPC pcType, newStates []pcAndSt) {
 		for _, st := range newStates {
-			ppcMap.addPrevPC(st.pc, pc)
-			newSt, diff := joinStates(stOrBot(st.pc), st.st)
-			if diff {
-				states[st.pc] = newSt
-				if !workset[st.pc] {
-					worklist = append(worklist, st.pc)
-					workset[st.pc] = true
+			pc := st.pc
+			ppcMap.addPrevPC(pc, prevPC)
+			sts := stOrBot(pc)
+			numDisjs := len(sts)
+			newState := st.st.withStackCopy().withMemCopy()
+			insertIdx := 0
+			for ; insertIdx < numDisjs; insertIdx++ {
+				loc := fmt.Sprintf("%x:%x", pc, insertIdx)
+				oldState := states[loc]
+				_, diff := joinStates(oldState, newState)
+				if !diff {
+					insertIdx = -1
+					break
 				}
+			}
+			if insertIdx < 0 {
+				continue
+			}
+
+			if maxDisjs <= insertIdx {
+				insertIdx = maxDisjs - 1
+			}
+			loc := fmt.Sprintf("%x:%x", pc, insertIdx)
+			oldState, exists := states[loc]
+			if exists {
+				var diff bool
+				newState, diff = joinStates(oldState, newState)
+				if !diff {
+					continue
+				}
+			}
+
+			states[loc] = newState
+			if _, exists := workset[loc]; !exists {
+				worklist = append(worklist, loc)
+				workset[loc] = pc
 			}
 		}
 	}
 
-	popState := func() pcType {
+	popState := func() (absState, pcType) {
 		ret := worklist[0]
 		worklist = worklist[1:]
+		pc := workset[ret]
 		delete(workset, ret)
-		return ret
+		return states[ret], pc
 	}
 
 	prefixLen := len(execPrefix)
@@ -174,12 +209,11 @@ func (a *constPropAnalyzer) Analyze(execPrefix execPrefix) (result, error, error
 	}
 
 	for 0 < len(worklist) {
-		pc := popState()
-		opcode := a.contract.GetOp(uint64(pc))
-		st := stOrBot(pc)
+		st, pc := popState()
 		if st.isBot {
 			continue
 		}
+		opcode := a.contract.GetOp(uint64(pc))
 		res, err := a.step(pc, ppcMap, st, concJt[opcode], opcode, absJt)
 		if err != nil {
 			return mayFail(StepExecFail), nil, err
