@@ -204,7 +204,7 @@ func (a *constPropAnalyzer) Analyze(execPrefix execPrefix) (result, error, error
 			continue
 		}
 		opcode := a.contract.GetOp(uint64(pc))
-		res, err := a.step(pc, ppcMap, st, concJt[opcode], opcode, absJt)
+		res, err := a.step(pc, ppcMap, st, concJt[opcode], opcode, absJt, false)
 		if err != nil {
 			return mayFail(StepExecFail), nil, err
 		}
@@ -242,25 +242,22 @@ func (a *constPropAnalyzer) calculatePrecondition(concJt concJumpTable, absJt ab
 		}
 		opcode := a.contract.GetOp(uint64(pc))
 		var err error
-		currRes, err = a.step(pc, ppcMap, currSt, concJt[opcode], opcode, absJt)
+		currRes, err = a.step(pc, ppcMap, currSt, concJt[opcode], opcode, absJt, true)
 		if err != nil {
-			return failRes(StepExecFail), err
-		}
-		if currRes.mayFail {
-			return currRes, nil
+			currRes = emptyRes()
 		}
 	}
 	return currRes, nil
 }
 
-func (a *constPropAnalyzer) step(pc pcType, ppcMap *prevPCMap, st absState, conc vm.Operation, op vm.OpCode, jt absJumpTable) (stepRes, error) {
+func (a *constPropAnalyzer) step(pc pcType, ppcMap *prevPCMap, st absState, conc vm.Operation, op vm.OpCode, jt absJumpTable, ignoreTargets bool) (stepRes, error) {
 	absOp := jt[op]
 	if absOp.valid != conc.Valid {
 		return failRes(InternalFail), nil
 	}
 
 	if a.analyzer.HasTargetInstructions() {
-		if a.analyzer.IsTargetInstruction(a.codeHash, uint64(pc)) {
+		if !ignoreTargets && a.analyzer.IsTargetInstruction(a.codeHash, uint64(pc)) {
 			return failRes(ReachedTargetInstructionFail), nil
 		}
 		if !absOp.valid {
@@ -275,7 +272,10 @@ func (a *constPropAnalyzer) step(pc pcType, ppcMap *prevPCMap, st absState, conc
 					return emptyRes(), nil
 				}
 			}
-			return failRes(InvalidOpcodeFail), nil
+			if !ignoreTargets {
+				return failRes(InvalidOpcodeFail), nil
+			}
+			return emptyRes(), nil
 		}
 	}
 
