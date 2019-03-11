@@ -91,7 +91,9 @@ type constPropAnalyzer struct {
 	codeHash           common.Hash
 	interpreter        *vm.EVMInterpreter
 	analyzer           *LookaheadAnalyzer
+	maxDisjuncts       int
 	failOnTopMemResize bool
+	useBoundedJoins    bool
 	verbose            bool
 }
 
@@ -103,6 +105,8 @@ func newConstPropAnalyzer(contract *vm.Contract, codeHash common.Hash, interpret
 		analyzer:           analyzer,
 		failOnTopMemResize: MagicBool(false),
 		verbose:            MagicBool(false),
+		useBoundedJoins:    MagicBool(false),
+		maxDisjuncts:       MagicInt(0),
 	}
 }
 
@@ -134,59 +138,45 @@ func (a *constPropAnalyzer) Analyze(execPrefix execPrefix) (result, error, error
 
 	absJt := newAbsJumpTable(false)
 	states := map[string]absState{}
+	keys := map[pcType]map[string]bool{}
 	ppcMap := newPrevPCMap()
 	var worklist []string
 	workset := map[string]pcType{}
-	maxDisjs := MagicInt(1)
-
-	stOrBot := func(pc pcType) []absState {
-		var sts []absState
-		for i := 0; i < maxDisjs; i++ {
-			loc := fmt.Sprintf("%x:%x", pc, i)
-			st, ok := states[loc]
-			if !ok {
-				return sts
-			}
-			sts = append(sts, st)
-		}
-		return sts
-	}
 
 	addNewStates := func(prevPC pcType, newStates []pcAndSt) {
 		for _, st := range newStates {
 			pc := st.pc
 			ppcMap.addPrevPC(pc, prevPC)
-			sts := stOrBot(pc)
-			numDisjs := len(sts)
-			newState := st.st.withStackCopy().withMemCopy()
-			insertIdx := 0
-			for ; insertIdx < numDisjs; insertIdx++ {
-				loc := fmt.Sprintf("%x:%x", pc, insertIdx)
-				oldState := states[loc]
-				_, diff := joinStates(oldState, newState)
-				if !diff {
-					insertIdx = -1
-					break
-				}
-			}
-			if insertIdx < 0 {
-				continue
-			}
 
-			if maxDisjs <= insertIdx {
-				insertIdx = maxDisjs - 1
+			newState := st.st.withStackCopy().withMemCopy()
+
+			stSize := -1
+			if !newState.isBot && !newState.stack.isTop && newState.stack.stack != nil {
+				stSize = newState.stack.len()
 			}
-			loc := fmt.Sprintf("%x:%x", pc, insertIdx)
+			loc := fmt.Sprintf("%x:%x:%x", pc, stSize, prevPC)
+
 			oldState, exists := states[loc]
+			ks := keys[pc]
+			if ks == nil {
+				ks = map[string]bool{}
+			}
+			numDisjs := len(ks)
+			if !exists && a.maxDisjuncts <= numDisjs {
+				loc = fmt.Sprintf("%x:%x", pc, -1)
+				oldState, exists = states[loc]
+			}
 			if exists {
 				var diff bool
 				newState, diff = joinStates(oldState, newState)
-				if !diff {
+				if !diff || a.useBoundedJoins {
 					continue
 				}
 			}
 
 			states[loc] = newState
+			ks[loc] = true
+			keys[pc] = ks
 			if _, exists := workset[loc]; !exists {
 				worklist = append(worklist, loc)
 				workset[loc] = pc
@@ -268,16 +258,25 @@ func (a *constPropAnalyzer) step(pc pcType, ppcMap *prevPCMap, st absState, conc
 	if absOp.valid != conc.Valid {
 		return failRes(InternalFail), nil
 	}
-	if !absOp.valid {
-		switch op {
-		case 0xfe:
-			if a.analyzer.IsCoveredAssertion(a.codeHash, uint64(pc)) {
-				// No need to report a failure since the assertion has already been covered.
-				return emptyRes(), nil
-			}
-		}
 
-		return failRes(InvalidOpcodeFail), nil
+	if a.analyzer.HasTargetInstructions() {
+		if a.analyzer.IsTargetInstruction(a.codeHash, uint64(pc)) {
+			return failRes(ReachedTargetInstructionFail), nil
+		}
+		if !absOp.valid {
+			return emptyRes(), nil
+		}
+	} else {
+		if !absOp.valid {
+			switch op {
+			case 0xfe:
+				if a.analyzer.IsCoveredAssertion(a.codeHash, uint64(pc)) {
+					// No need to report a failure since the assertion has already been covered.
+					return emptyRes(), nil
+				}
+			}
+			return failRes(InvalidOpcodeFail), nil
+		}
 	}
 
 	if st.stack.isTop {

@@ -32,6 +32,7 @@ import (
 	"github.com/practical-formal-methods/bran/vm"
 )
 
+var ReachedTargetInstructionFail = "reached-target-instruction"
 var InvalidOpcodeFail = "invalid-opcode"
 var UnsupportedOpcodeFail = "unsupported-opcode"
 var MemoryOverflowFail = "memory-overflow-failure"
@@ -45,13 +46,14 @@ var StepExecFail = "step-execution-failure"
 var InternalFail = "internal-failure"
 
 type LookaheadAnalyzer struct {
-	callInfos         map[uint64]*callInfo
-	cachedResults     map[prefixHash]result
-	coveredAssertions map[string]bool
-	lids              map[string]string
-	coveredPaths      map[string]uint64
-	maxPrefixLen      int
-	useDummyAnalysis  bool
+	callInfos           map[uint64]*callInfo
+	cachedResults       map[prefixHash]result
+	isTargetInstruction map[string]bool
+	isCoveredAssertion  map[string]bool
+	lids                map[string]string
+	coveredPaths        map[string]uint64
+	maxPrefixLen        int
+	useDummyAnalysis    bool
 
 	numSuccess    uint64
 	numFail       uint64
@@ -76,14 +78,15 @@ type prefixHash uint32
 
 func NewLookaheadAnalyzer() *LookaheadAnalyzer {
 	return &LookaheadAnalyzer{
-		failureCauses:     map[string]uint64{},
-		cachedResults:     map[prefixHash]result{},
-		coveredAssertions: map[string]bool{},
-		lids:              map[string]string{},
-		coveredPaths:      map[string]uint64{},
-		callInfos:         map[uint64]*callInfo{},
-		maxPrefixLen:      MagicInt(8192),
-		useDummyAnalysis:  MagicBool(false),
+		failureCauses:       map[string]uint64{},
+		cachedResults:       map[prefixHash]result{},
+		isTargetInstruction: map[string]bool{},
+		isCoveredAssertion:  map[string]bool{},
+		lids:                map[string]string{},
+		coveredPaths:        map[string]uint64{},
+		callInfos:           map[uint64]*callInfo{},
+		maxPrefixLen:        MagicInt(8192),
+		useDummyAnalysis:    MagicBool(false),
 	}
 }
 
@@ -221,12 +224,30 @@ func (a *LookaheadAnalyzer) CanIgnoreSuffix(callNumber uint64) (canIgnore, avoid
 	return true, false, "", pid, nil
 }
 
-func (a *LookaheadAnalyzer) RecordCoveredAssertion(codeHash []byte, pc uint64) {
-	a.coveredAssertions[fmt.Sprintf("%032x:%x", codeHash, pc)] = true
+func (a *LookaheadAnalyzer) IsCoveredAssertion(codeHash common.Hash, pc uint64) bool {
+	return a.isCoveredAssertion[fmt.Sprintf("%032x:%x", codeHash, pc)]
 }
 
-func (a *LookaheadAnalyzer) IsCoveredAssertion(codeHash common.Hash, pc uint64) bool {
-	return a.coveredAssertions[fmt.Sprintf("%032x:%x", codeHash, pc)]
+func (a *LookaheadAnalyzer) RecordCoveredAssertion(codeHash []byte, pc uint64) {
+	a.isCoveredAssertion[fmt.Sprintf("%032x:%x", codeHash, pc)] = true
+}
+
+func (a *LookaheadAnalyzer) AddTargetInstruction(codeHash []byte, pc uint64) {
+	loc := fmt.Sprintf("%032x:%x", codeHash, pc)
+	a.isTargetInstruction[loc] = true
+}
+
+func (a *LookaheadAnalyzer) AddTargetLocation(loc string) {
+	a.isTargetInstruction[loc] = true
+}
+
+func (a *LookaheadAnalyzer) HasTargetInstructions() bool {
+	return 0 < len(a.isTargetInstruction)
+}
+
+func (a *LookaheadAnalyzer) IsTargetInstruction(codeHash common.Hash, pc uint64) bool {
+	id := fmt.Sprintf("%032x:%x", codeHash, pc)
+	return a.isTargetInstruction[id]
 }
 
 func (a *LookaheadAnalyzer) startTimer() {
