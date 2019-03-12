@@ -59,7 +59,7 @@ func joinStates(s1 absState, s2 absState) (absState, bool) {
 	if s1.isBot {
 		return s2, true
 	}
-	nStack, diffStack := joinStacks(s1.stack, s2.stack)
+	nStack, diffStack := joinStacks(s1.stack, s2.stack, MagicBool(true))
 	nMem, diffMem := joinMems(s1.mem, s2.mem)
 	ns := absState{
 		stack: nStack,

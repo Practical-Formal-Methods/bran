@@ -154,7 +154,7 @@ func (a *constPropAnalyzer) Analyze(execPrefix execPrefix) (result, error, error
 			if !newState.isBot && !newState.stack.isTop && newState.stack.stack != nil {
 				stSize = newState.stack.len()
 			}
-			loc := fmt.Sprintf("%x:%x:%x", pc, stSize, prevPC)
+			loc := fmt.Sprintf("%x:%x", pc, stSize)
 
 			oldState, exists := states[loc]
 			ks := keys[pc]
