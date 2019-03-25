@@ -249,11 +249,8 @@ func (a *constPropAnalyzer) step(pc pcType, ppcMap *prevPCMap, st absState, conc
 	if st.stack.isTop {
 		return failRes(TopStackFail), nil
 	}
-	if conc.ValidateStack == nil {
-		return failRes(InternalFail), nil
-	}
-	// We implicitly assume that all validation functions just look at the stack size and not its contents.
-	if valErr := conc.ValidateStack(st.stack.stack); valErr != nil {
+
+	if stLen := st.stack.len(); stLen < conc.MinStack || conc.MaxStack < stLen {
 		return failRes(StackValidationFail), nil
 	}
 
@@ -262,30 +259,29 @@ func (a *constPropAnalyzer) step(pc pcType, ppcMap *prevPCMap, st absState, conc
 		if conc.MemorySize == nil {
 			return failRes(InternalFail), nil
 		}
-		msize, msErr := absOp.memSize(st.stack, conc.MemorySize)
+		msize, overflow, isUnknown, msErr := absOp.memSize(st.stack, conc.MemorySize)
 		if msErr != nil {
 			return failRes(InternalFail), nil
 		}
 
-		if isTop(msize) {
+		if isUnknown {
 			if a.failOnTopMemResize {
 				return failRes(TopMemoryResizeFail), nil
 			}
 			postMem = topMem()
 		} else {
-			sz, overflow := vm.BigUint64(msize)
 			if overflow {
 				return failRes(MemoryOverflowFail), nil
 			}
 
-			var sz2 uint64
-			if sz2, overflow = math.SafeMul(vm.ToWordSize(sz), 32); overflow {
+			var msz uint64
+			if msz, overflow = math.SafeMul(vm.ToWordSize(msize), 32); overflow {
 				return failRes(MemoryOverflowFail), nil
 			}
 
-			if 0 < sz2 {
+			if 0 < msz {
 				postMem = st.mem.clone()
-				postMem.resize(sz2)
+				postMem.resize(msz)
 			}
 		}
 	}

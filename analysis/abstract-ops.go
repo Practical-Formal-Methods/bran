@@ -134,7 +134,7 @@ type execEnv struct {
 }
 
 // memSizeFn calculates the new size of the memory.
-type memSizeFn func(stack absStack, conc vm.MemorySizeFunc) (*big.Int, error)
+type memSizeFn func(stack absStack, conc vm.MemorySizeFunc) (uint64, bool, bool, error)
 
 // withSt returns an environment identical to the current one, except for the new state.
 func (e execEnv) withSt(newSt absState) execEnv {
@@ -191,15 +191,16 @@ func execConc(env execEnv) error {
 
 // makeMemFn returns a function that computes the abstract memory size.
 func makeMemFn(indices ...int) memSizeFn {
-	return func(stack absStack, conc vm.MemorySizeFunc) (*big.Int, error) {
+	return func(stack absStack, conc vm.MemorySizeFunc) (uint64, bool, bool, error) {
 		hasTop, err := stack.hasTop(indices...)
 		if err != nil {
-			return nil, err
+			return 0, false, false, err
 		}
 		if hasTop {
-			return topVal(), nil
+			return 0, false, true, nil
 		}
-		return conc(stack.stack), nil
+		sz, overflow := conc(stack.stack)
+		return sz, overflow, false, nil
 	}
 }
 

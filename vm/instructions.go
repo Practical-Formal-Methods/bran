@@ -18,7 +18,6 @@ package vm
 
 import (
 	"errors"
-	"fmt"
 	"math/big"
 
 	"github.com/ethereum/go-ethereum/common"
@@ -35,6 +34,7 @@ var (
 	errReturnDataOutOfBounds = errors.New("evm: return data out of bounds")
 	errExecutionReverted     = errors.New("evm: execution reverted")
 	errMaxCodeSizeExceeded   = errors.New("evm: max code size exceeded")
+	errInvalidJump           = errors.New("evm: invalid jump destination")
 )
 
 func opAdd(pc *uint64, interpreter *EVMInterpreter, contract *Contract, memory *Memory, stack *Stack) ([]byte, error) {
@@ -405,7 +405,7 @@ func opSha3(pc *uint64, interpreter *EVMInterpreter, contract *Contract, memory 
 }
 
 func opAddress(pc *uint64, interpreter *EVMInterpreter, contract *Contract, memory *Memory, stack *Stack) ([]byte, error) {
-	stack.Push(contract.Address().Big())
+	stack.Push(interpreter.IntPool.get().SetBytes(contract.Address().Bytes()))
 	return nil, nil
 }
 
@@ -416,12 +416,12 @@ func opBalance(pc *uint64, interpreter *EVMInterpreter, contract *Contract, memo
 }
 
 func opOrigin(pc *uint64, interpreter *EVMInterpreter, contract *Contract, memory *Memory, stack *Stack) ([]byte, error) {
-	stack.Push(interpreter.evm.Origin.Big())
+	stack.Push(interpreter.IntPool.get().SetBytes(interpreter.evm.Origin.Bytes()))
 	return nil, nil
 }
 
 func opCaller(pc *uint64, interpreter *EVMInterpreter, contract *Contract, memory *Memory, stack *Stack) ([]byte, error) {
-	stack.Push(contract.Caller().Big())
+	stack.Push(interpreter.IntPool.get().SetBytes(contract.Caller().Bytes()))
 	return nil, nil
 }
 
@@ -467,7 +467,7 @@ func opReturnDataCopy(pc *uint64, interpreter *EVMInterpreter, contract *Contrac
 	)
 	defer interpreter.IntPool.put(memOffset, dataOffset, length, end)
 
-	if end.BitLen() > 64 || uint64(len(interpreter.returnData)) < end.Uint64() {
+	if !end.IsUint64() || uint64(len(interpreter.returnData)) < end.Uint64() {
 		return nil, errReturnDataOutOfBounds
 	}
 	memory.Set(memOffset.Uint64(), length.Uint64(), interpreter.returnData[dataOffset.Uint64():end.Uint64()])
@@ -572,7 +572,7 @@ func opBlockhash(pc *uint64, interpreter *EVMInterpreter, contract *Contract, me
 }
 
 func opCoinbase(pc *uint64, interpreter *EVMInterpreter, contract *Contract, memory *Memory, stack *Stack) ([]byte, error) {
-	stack.Push(interpreter.evm.Coinbase.Big())
+	stack.Push(interpreter.IntPool.get().SetBytes(interpreter.evm.Coinbase.Bytes()))
 	return nil, nil
 }
 
@@ -645,8 +645,7 @@ func opSstore(pc *uint64, interpreter *EVMInterpreter, contract *Contract, memor
 func opJump(pc *uint64, interpreter *EVMInterpreter, contract *Contract, memory *Memory, stack *Stack) ([]byte, error) {
 	pos := stack.Pop()
 	if !contract.validJumpdest(pos) {
-		nop := contract.GetOp(pos.Uint64())
-		return nil, fmt.Errorf("invalid jump destination (%v) %v", nop, pos)
+		return nil, errInvalidJump
 	}
 	*pc = pos.Uint64()
 
@@ -658,8 +657,7 @@ func opJumpi(pc *uint64, interpreter *EVMInterpreter, contract *Contract, memory
 	pos, cond := stack.Pop(), stack.Pop()
 	if cond.Sign() != 0 {
 		if !contract.validJumpdest(pos) {
-			nop := contract.GetOp(pos.Uint64())
-			return nil, fmt.Errorf("invalid jump destination (%v) %v", nop, pos)
+			return nil, errInvalidJump
 		}
 		*pc = pos.Uint64()
 	} else {
@@ -711,7 +709,7 @@ func opCreate(pc *uint64, interpreter *EVMInterpreter, contract *Contract, memor
 	} else if suberr != nil && suberr != ErrCodeStoreOutOfGas {
 		stack.Push(interpreter.IntPool.getZero())
 	} else {
-		stack.Push(addr.Big())
+		stack.Push(interpreter.IntPool.get().SetBytes(addr.Bytes()))
 	}
 	contract.Gas += returnGas
 	interpreter.IntPool.put(value, offset, size)
@@ -739,7 +737,7 @@ func opCreate2(pc *uint64, interpreter *EVMInterpreter, contract *Contract, memo
 	if suberr != nil {
 		stack.Push(interpreter.IntPool.getZero())
 	} else {
-		stack.Push(addr.Big())
+		stack.Push(interpreter.IntPool.get().SetBytes(addr.Bytes()))
 	}
 	contract.Gas += returnGas
 	interpreter.IntPool.put(endowment, offset, size, salt)
@@ -889,7 +887,7 @@ func opSuicide(pc *uint64, interpreter *EVMInterpreter, contract *Contract, memo
 // following functions are used by the instruction jump  table
 
 // make log instruction function
-func makeLog(size int) executionFunc {
+func makeLog(size int) ExecutionFunc {
 	return func(pc *uint64, interpreter *EVMInterpreter, contract *Contract, memory *Memory, stack *Stack) ([]byte, error) {
 		topics := make([]common.Hash, size)
 		mStart, mSize := stack.Pop(), stack.Pop()
@@ -912,8 +910,23 @@ func makeLog(size int) executionFunc {
 	}
 }
 
+// opPush1 is a specialized version of pushN
+func opPush1(pc *uint64, interpreter *EVMInterpreter, contract *Contract, memory *Memory, stack *Stack) ([]byte, error) {
+	var (
+		codeLen = uint64(len(contract.Code))
+		integer = interpreter.IntPool.get()
+	)
+	*pc += 1
+	if *pc < codeLen {
+		stack.Push(integer.SetUint64(uint64(contract.Code[*pc])))
+	} else {
+		stack.Push(integer.SetUint64(0))
+	}
+	return nil, nil
+}
+
 // make push instruction function
-func makePush(size uint64, pushByteSize int) executionFunc {
+func makePush(size uint64, pushByteSize int) ExecutionFunc {
 	return func(pc *uint64, interpreter *EVMInterpreter, contract *Contract, memory *Memory, stack *Stack) ([]byte, error) {
 		codeLen := len(contract.Code)
 
@@ -936,7 +949,7 @@ func makePush(size uint64, pushByteSize int) executionFunc {
 }
 
 // make dup instruction function
-func makeDup(size int64) executionFunc {
+func makeDup(size int64) ExecutionFunc {
 	return func(pc *uint64, interpreter *EVMInterpreter, contract *Contract, memory *Memory, stack *Stack) ([]byte, error) {
 		stack.dup(interpreter.IntPool, int(size))
 		return nil, nil
@@ -944,7 +957,7 @@ func makeDup(size int64) executionFunc {
 }
 
 // make swap instruction function
-func makeSwap(size int64) executionFunc {
+func makeSwap(size int64) ExecutionFunc {
 	// switch n + 1 otherwise n would be swapped with n
 	size++
 	return func(pc *uint64, interpreter *EVMInterpreter, contract *Contract, memory *Memory, stack *Stack) ([]byte, error) {

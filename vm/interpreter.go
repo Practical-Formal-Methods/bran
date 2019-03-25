@@ -101,9 +101,9 @@ func NewEVMInterpreter(evm *EVM, cfg Config) *EVMInterpreter {
 	if !cfg.JumpTable[STOP].Valid {
 		switch {
 		case evm.ChainConfig().IsConstantinople(evm.BlockNumber):
-			cfg.JumpTable = ConstantinopleInstructionSet
+			cfg.JumpTable = constantinopleInstructionSet
 		case evm.ChainConfig().IsByzantium(evm.BlockNumber):
-			cfg.JumpTable = ByzantiumInstructionSet
+			cfg.JumpTable = byzantiumInstructionSet
 		case evm.ChainConfig().IsHomestead(evm.BlockNumber):
 			cfg.JumpTable = homesteadInstructionSet
 		default:
@@ -116,22 +116,6 @@ func NewEVMInterpreter(evm *EVM, cfg Config) *EVMInterpreter {
 		Cfg:      cfg,
 		gasTable: evm.ChainConfig().GasTable(evm.BlockNumber),
 	}
-}
-
-func (in *EVMInterpreter) enforceRestrictions(op OpCode, operation Operation, stack *Stack) error {
-	if in.evm.chainRules.IsByzantium {
-		if in.readOnly {
-			// If the interpreter is operating in readonly mode, make sure no
-			// state-modifying operation is performed. The 3rd stack item
-			// for a call operation is the value. Transferring value from one
-			// account to the others means the state is modified and should also
-			// return with an error.
-			if operation.writes || (op == CALL && stack.Back(2).BitLen() > 0) {
-				return errWriteProtection
-			}
-		}
-	}
-	return nil
 }
 
 // Run loops and evaluates the contract's code with the given input data and returns
@@ -182,6 +166,7 @@ func (in *EVMInterpreter) Run(contract *Contract, input []byte, readOnly bool) (
 		pcCopy  uint64 // needed for the deferred Tracer
 		gasCopy uint64 // for Tracer to log gas remaining before execution
 		logged  bool   // deferred Tracer should ignore already logged steps
+		res     []byte // result of the opcode execution function
 	)
 	contract.Input = input
 
@@ -216,19 +201,35 @@ func (in *EVMInterpreter) Run(contract *Contract, input []byte, readOnly bool) (
 		if !operation.Valid {
 			return nil, fmt.Errorf("invalid opcode 0x%x", int(op))
 		}
-		if err := operation.ValidateStack(stack); err != nil {
-			return nil, err
+		// Validate stack
+		if sLen := stack.Len(); sLen < operation.MinStack {
+			return nil, fmt.Errorf("stack underflow (%d <=> %d)", sLen, operation.MinStack)
+		} else if sLen > operation.MaxStack {
+			return nil, fmt.Errorf("stack limit reached %d (%d)", sLen, operation.MaxStack)
 		}
 		// If the operation is valid, enforce and write restrictions
-		if err := in.enforceRestrictions(op, operation, stack); err != nil {
-			return nil, err
+		if in.readOnly && in.evm.chainRules.IsByzantium {
+			// If the interpreter is operating in readonly mode, make sure no
+			// state-modifying operation is performed. The 3rd stack item
+			// for a call operation is the value. Transferring value from one
+			// account to the others means the state is modified and should also
+			// return with an error.
+			if operation.writes || (op == CALL && stack.Back(2).Sign() != 0) {
+				return nil, errWriteProtection
+			}
+		}
+		// Static portion of gas
+		if !contract.UseGas(operation.constantGas) {
+			return nil, ErrOutOfGas
 		}
 
 		var memorySize uint64
 		// calculate the new memory size and expand the memory to fit
 		// the operation
+		// Memory check needs to be done prior to evaluating the dynamic gas portion,
+		// to detect calculation overflows
 		if operation.MemorySize != nil {
-			memSize, overflow := BigUint64(operation.MemorySize(stack))
+			memSize, overflow := operation.MemorySize(stack)
 			if overflow {
 				return nil, errGasUintOverflow
 			}
@@ -238,11 +239,14 @@ func (in *EVMInterpreter) Run(contract *Contract, input []byte, readOnly bool) (
 				return nil, errGasUintOverflow
 			}
 		}
+		// Dynamic portion of gas
 		// consume the gas and return an error if not enough gas is available.
 		// cost is explicitly set so that the capture state defer method can get the proper cost
-		cost, err = operation.gasCost(in.gasTable, in.evm, contract, stack, mem, memorySize)
-		if err != nil || !contract.UseGas(cost) {
-			return nil, ErrOutOfGas
+		if operation.dynamicGas != nil {
+			cost, err = operation.dynamicGas(in.gasTable, in.evm, contract, stack, mem, memorySize)
+			if err != nil || !contract.UseGas(cost) {
+				return nil, ErrOutOfGas
+			}
 		}
 		if memorySize > 0 {
 			mem.Resize(memorySize)
@@ -254,7 +258,7 @@ func (in *EVMInterpreter) Run(contract *Contract, input []byte, readOnly bool) (
 		}
 
 		// execute the operation
-		res, err := operation.Execute(&pc, in, contract, mem, stack)
+		res, err = operation.Execute(&pc, in, contract, mem, stack)
 		// if the operation clears the return data (e.g. it has returning data)
 		// set the last return to the result of the operation.
 		if operation.returns {
