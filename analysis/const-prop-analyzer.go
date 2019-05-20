@@ -256,7 +256,25 @@ func (a *constPropAnalyzer) step(pc pcType, ppcMap *prevPCMap, st absState, conc
 		return failRes(InternalFail), nil
 	}
 
-	if a.analyzer.HasTargetInstructions() {
+	if a.analyzer.IsTargetingAssertionFailed() {
+		if op == vm.LOG1 {
+			// We look for the following event type:
+			// event AssertionFailed(string message);
+			isAssertionFailed := true
+			if st.isBot {
+				isAssertionFailed = false
+			} else if !st.stack.isTop && 3 <= st.stack.len() {
+				topic := st.stack.stack.Back(2)
+				magicTopic, _ := math.ParseBig256("0xb42604cb105a16c8f6db8a41e6b00c0c1b4826465e8bc504b3eb3e88b3e6a4a0")
+				if !isTop(topic) && topic.Cmp(magicTopic) != 0 {
+					isAssertionFailed = false
+				}
+			}
+			if !ignoreTargets && isAssertionFailed {
+				return failRes(ReachedAssertionFailed), nil
+			}
+		}
+	} else if a.analyzer.HasTargetInstructions() {
 		if !ignoreTargets && a.analyzer.IsTargetInstruction(a.codeHash, uint64(pc)) {
 			return failRes(ReachedTargetInstructionFail), nil
 		}

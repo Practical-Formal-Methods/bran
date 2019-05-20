@@ -33,6 +33,7 @@ import (
 )
 
 var ReachedTargetInstructionFail = "reached-target-instruction"
+var ReachedAssertionFailed = "reached-assertion-failed"
 var InvalidOpcodeFail = "invalid-opcode"
 var UnsupportedOpcodeFail = "unsupported-opcode"
 var MemoryOverflowFail = "memory-overflow-failure"
@@ -46,14 +47,15 @@ var StepExecFail = "step-execution-failure"
 var InternalFail = "internal-failure"
 
 type LookaheadAnalyzer struct {
-	callInfos           map[uint64]*callInfo
-	cachedResults       map[prefixHash]result
-	isTargetInstruction map[string]bool
-	isCoveredAssertion  map[string]bool
-	lids                map[string]string
-	coveredPaths        map[string]uint64
-	maxPrefixLen        int
-	useDummyAnalysis    bool
+	callInfos                  map[uint64]*callInfo
+	cachedResults              map[prefixHash]result
+	isTargetInstruction        map[string]bool
+	isCoveredAssertion         map[string]bool
+	lids                       map[string]string
+	coveredPaths               map[string]uint64
+	maxPrefixLen               int
+	useDummyAnalysis           bool
+	isTargetingAssertionFailed bool
 
 	numSuccess    uint64
 	numFail       uint64
@@ -243,6 +245,14 @@ func (a *LookaheadAnalyzer) AddTargetLocation(loc string) {
 
 func (a *LookaheadAnalyzer) HasTargetInstructions() bool {
 	return 0 < len(a.isTargetInstruction)
+}
+
+func (a *LookaheadAnalyzer) IsTargetingAssertionFailed() bool {
+	return a.isTargetingAssertionFailed
+}
+
+func (a *LookaheadAnalyzer) TargetAssertionFailed() {
+	a.isTargetingAssertionFailed = true
 }
 
 func (a *LookaheadAnalyzer) IsTargetInstruction(codeHash common.Hash, pc uint64) bool {
