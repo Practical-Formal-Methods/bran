@@ -274,6 +274,9 @@ func (a *constPropAnalyzer) step(pc pcType, ppcMap *prevPCMap, st absState, conc
 				return failRes(ReachedAssertionFailed), nil
 			}
 		}
+		if !abstractOp.valid {
+			return emptyRes(), nil
+		}
 	} else if a.analyzer.HasTargetInstructions() {
 		if !ignoreTargets && a.analyzer.IsTargetInstruction(a.codeHash, uint64(pc)) {
 			return failRes(ReachedTargetInstructionFail), nil
