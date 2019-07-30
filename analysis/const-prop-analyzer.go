@@ -128,9 +128,9 @@ func (a *constPropAnalyzer) Analyze(execPrefix execPrefix) (result, error, error
 
 	concJt := a.interpreter.Cfg.JumpTable
 	absJtPrefix := newAbsJumpTable(true)
-	prefixRes, err := a.calculatePrecondition(concJt, absJtPrefix, execPrefix)
-	if err != nil {
-		return prefixMayFail(PrefixComputationFail), err, nil
+	prefixRes, preErr := a.calculatePrecondition(concJt, absJtPrefix, execPrefix)
+	if preErr != nil {
+		return prefixMayFail(PrefixComputationFail), preErr, nil
 	}
 	if prefixRes.mayFail {
 		return prefixMayFail(fmt.Sprintf("%v(%v)", PrefixComputationFail, prefixRes.failureCause)), nil, nil
@@ -177,7 +177,7 @@ func (a *constPropAnalyzer) Analyze(execPrefix execPrefix) (result, error, error
 			states[loc] = newState
 			ks[loc] = true
 			keys[pc] = ks
-			if _, exists := workset[loc]; !exists {
+			if _, ex := workset[loc]; !ex {
 				worklist = append(worklist, loc)
 				workset[loc] = pc
 			}
@@ -204,9 +204,9 @@ func (a *constPropAnalyzer) Analyze(execPrefix execPrefix) (result, error, error
 			continue
 		}
 		opcode := a.contract.GetOp(uint64(pc))
-		res, err := a.step(pc, ppcMap, st, concJt[opcode], opcode, absJt, false)
-		if err != nil {
-			return mayFail(StepExecFail), nil, err
+		res, stepErr := a.step(pc, ppcMap, st, concJt[opcode], opcode, absJt, false)
+		if stepErr != nil {
+			return mayFail(StepExecFail), nil, stepErr
 		}
 		if res.mayFail {
 			return mayFail(res.failureCause), nil, nil
@@ -251,8 +251,8 @@ func (a *constPropAnalyzer) calculatePrecondition(concJt concJumpTable, absJt ab
 }
 
 func (a *constPropAnalyzer) step(pc pcType, ppcMap *prevPCMap, st absState, conc vm.Operation, op vm.OpCode, jt absJumpTable, ignoreTargets bool) (stepRes, error) {
-	absOp := jt[op]
-	if absOp.valid != conc.Valid {
+	abstractOp := jt[op]
+	if abstractOp.valid != conc.Valid {
 		return failRes(InternalFail), nil
 	}
 
@@ -278,11 +278,11 @@ func (a *constPropAnalyzer) step(pc pcType, ppcMap *prevPCMap, st absState, conc
 		if !ignoreTargets && a.analyzer.IsTargetInstruction(a.codeHash, uint64(pc)) {
 			return failRes(ReachedTargetInstructionFail), nil
 		}
-		if !absOp.valid {
+		if !abstractOp.valid {
 			return emptyRes(), nil
 		}
 	} else {
-		if !absOp.valid {
+		if !abstractOp.valid {
 			switch op {
 			case 0xfe:
 				if a.analyzer.IsCoveredAssertion(a.codeHash, uint64(pc)) {
@@ -306,11 +306,11 @@ func (a *constPropAnalyzer) step(pc pcType, ppcMap *prevPCMap, st absState, conc
 	}
 
 	postMem := st.mem
-	if absOp.memSize != nil {
+	if abstractOp.memSize != nil {
 		if conc.MemorySize == nil {
 			return failRes(InternalFail), nil
 		}
-		msize, overflow, isUnknown, msErr := absOp.memSize(st.stack, conc.MemorySize)
+		msize, overflow, isUnknown, msErr := abstractOp.memSize(st.stack, conc.MemorySize)
 		if msErr != nil {
 			return failRes(InternalFail), nil
 		}
@@ -349,5 +349,5 @@ func (a *constPropAnalyzer) step(pc pcType, ppcMap *prevPCMap, st absState, conc
 		st:          postSt,
 		conc:        conc,
 	}
-	return absOp.exec(env)
+	return abstractOp.exec(env)
 }

@@ -183,7 +183,7 @@ func TestConstantPropagation(t *testing.T) {
 		a := NewLookaheadAnalyzer()
 		a.Start(1, code, crypto.Keccak256Hash(code).Bytes())
 		for _, pc := range tc.prefix {
-			a.AppendPrefixInstruction(1, uint64(pc))
+			a.AppendPrefixInstruction(1, pc)
 		}
 		canIgnore, _, cause, _, err := a.CanIgnoreSuffix(1)
 		if err != nil {

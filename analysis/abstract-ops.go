@@ -547,8 +547,8 @@ func opMload(env execEnv) (stepRes, error) {
 	if isTop(offset) {
 		stack2.Push(topVal())
 	} else {
-		absBytes := mem2.get(offset.Int64(), 32)
-		stack2.Push(absBytes.toBigInt())
+		loadedBytes := mem2.get(offset.Int64(), 32)
+		stack2.Push(loadedBytes.toBigInt())
 	}
 	return nextPcRes(env2), nil
 }
