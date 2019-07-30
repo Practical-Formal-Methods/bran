@@ -499,8 +499,8 @@ func makePopPushMemTopFn(pop, push, memOffsetIdx, memSizeArgIdx int) execFn {
 	return func(env execEnv) (stepRes, error) {
 		env2 := env.withStackCopy().withMemCopy().withPcCopy()
 		stack2, _ := env2.unpack()
-		memOffset := stack2.Back(5)
-		memSize := stack2.Back(6)
+		memOffset := stack2.Back(memOffsetIdx)
+		memSize := stack2.Back(memSizeArgIdx)
 		for i := 0; i < pop; i++ {
 			stack2.Pop()
 		}
