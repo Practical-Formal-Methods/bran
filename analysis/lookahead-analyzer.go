@@ -347,7 +347,9 @@ func newDummyContract(address common.Address, code []byte, codeHash common.Hash)
 
 // newDummyEVM creates a EVM object we can use to run code.
 func newDummyEVM() *vm.EVM {
-	ctx := vm.Context{}
+	ctx := vm.Context{
+		BlockNumber: big.NewInt(1),
+	}
 	evmConfig := vm.Config{JumpTable: vm.NewConstantinopleInstructionSet()}
 	chainConfig := &params.ChainConfig{
 		ChainID:             big.NewInt(1),

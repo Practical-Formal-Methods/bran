@@ -1,1 +1,1 @@
-This directory contains code from the go-ethereum project (https://github.com/ethereum/go-ethereum, commit 78d90c47f753d68c340a970f59338db91a465470) with very minor changes: (1) some helper functions were added and (2) some functions and structs were made public.
+This directory contains code from the go-ethereum project (https://github.com/ethereum/go-ethereum, commit 26f538b0e5a78bbe6ffc22bc5c25d42001d1bc9d) with very minor changes: (1) some helper functions were added and (2) some functions and structs were made public.
