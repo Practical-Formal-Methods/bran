@@ -314,12 +314,14 @@ func newAbsJumpTable(forPrefix bool) absJumpTable {
 		},
 		vm.EXTCODEHASH: makePopPushTopOp(1, 1),
 
-		vm.BLOCKHASH:  makePopPushTopOp(1, 1),
-		vm.COINBASE:   makePopPushTopOp(0, 1),
-		vm.TIMESTAMP:  makePopPushTopOp(0, 1),
-		vm.NUMBER:     makePopPushTopOp(0, 1),
-		vm.DIFFICULTY: makePopPushTopOp(0, 1),
-		vm.GASLIMIT:   makePopPushTopOp(0, 1),
+		vm.BLOCKHASH:   makePopPushTopOp(1, 1),
+		vm.COINBASE:    makePopPushTopOp(0, 1),
+		vm.TIMESTAMP:   makePopPushTopOp(0, 1),
+		vm.NUMBER:      makePopPushTopOp(0, 1),
+		vm.DIFFICULTY:  makePopPushTopOp(0, 1),
+		vm.GASLIMIT:    makePopPushTopOp(0, 1),
+		vm.CHAINID:     makePopPushTopOp(0, 1),
+		vm.SELFBALANCE: makePopPushTopOp(0, 1),
 
 		vm.POP: makeStackOp(1, 0),
 
