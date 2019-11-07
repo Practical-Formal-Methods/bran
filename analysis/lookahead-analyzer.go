@@ -362,6 +362,7 @@ func newDummyEVM() *vm.EVM {
 		ByzantiumBlock:      big.NewInt(0),
 		ConstantinopleBlock: big.NewInt(0),
 		PetersburgBlock:     big.NewInt(0),
+		IstanbulBlock:       big.NewInt(0),
 		Ethash:              new(params.EthashConfig),
 	}
 	dummyStateDB := &state.StateDB{}
