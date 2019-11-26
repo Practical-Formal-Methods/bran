@@ -55,7 +55,7 @@ func (m absMem) get(offset, size int64) absBytes {
 	if m.isTop {
 		return topBytes()
 	}
-	bs := m.mem.Get(offset, size)
+	bs := m.mem.GetCopy(offset, size)
 	for _, b := range bs {
 		if absByte(b).isTop() {
 			return topBytes()
